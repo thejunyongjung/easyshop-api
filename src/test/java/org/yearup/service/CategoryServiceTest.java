@@ -15,7 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @DataJpaTest
 @Sql(scripts = "classpath:test-insert-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-public class CategoryServiceTest {
+class CategoryServiceTest
+{
 
     @Autowired
     private CategoryRepository categoryRepository;
