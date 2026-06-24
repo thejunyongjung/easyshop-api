@@ -8,6 +8,8 @@ import org.springframework.web.server.ResponseStatusException;
 import org.yearup.models.Product;
 import org.yearup.service.ProductService;
 
+import jakarta.validation.Valid;
+
 import java.util.List;
 
 @RestController
@@ -46,7 +48,7 @@ public class ProductsController
 
     @PostMapping()
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<Product> addProduct(@RequestBody Product product)
+    public ResponseEntity<Product> addProduct(@Valid @RequestBody Product product)
     {
         Product saved = productService.create(product);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);

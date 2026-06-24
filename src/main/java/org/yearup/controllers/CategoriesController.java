@@ -10,6 +10,8 @@ import org.yearup.models.Product;
 import org.yearup.service.CategoryService;
 import org.yearup.service.ProductService;
 
+import jakarta.validation.Valid;
+
 import java.util.List;
 
 @RestController
@@ -55,7 +57,7 @@ public class CategoriesController
 
     @PostMapping
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<Category> addCategory(@RequestBody Category category)
+    public ResponseEntity<Category> addCategory(@Valid @RequestBody Category category)
     {
         Category saved = categoryService.create(category);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
