@@ -64,6 +64,21 @@ class CategoryServiceTest
     }
 
     @Test
+    public void update_shouldPersist_changedFields()
+    {
+        // arrange
+        CategoryService categoryService = new CategoryService(categoryRepository);
+        int id = categoryRepository.findAll().get(0).getCategoryId();
+
+        // act
+        categoryService.update(id, new Category(0, "New Name", "New Description"));
+
+        // assert
+        assertEquals("New Name", categoryService.getById(id).getName(),
+                "Because update should persist the new changes");
+    }
+
+    @Test
     public void delete_shouldRemove_theCategory()
     {
         // arrange
