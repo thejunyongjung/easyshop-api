@@ -1,6 +1,7 @@
 package org.yearup.models;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 
 @Entity
 @Table(name = "products")
@@ -11,9 +12,11 @@ public class Product
     @Column(name = "product_id")
     private int productId;
 
+    @NotBlank // Names can't be empty or blank
     @Column(name = "name")
     private String name;
 
+    @Positive // price must be greater than 0
     @Column(name = "price")
     private double price;
 
@@ -26,6 +29,7 @@ public class Product
     @Column(name = "subcategory")
     private String subCategory;
 
+    @PositiveOrZero // stock must be 0 or greater than 0
     @Column(name = "stock")
     private int stock;
 
