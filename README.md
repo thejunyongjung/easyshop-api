@@ -4,19 +4,14 @@
 > sign in, fill a shopping cart, manage their profile, and check out — and lets
 > store admins manage the products and categories. Built with **Spring Boot** and **MySQL**.
 
-`Java 17` · `Spring Boot 4` · `Spring Security (JWT)` · `Spring Data JPA` · `MySQL` · `JUnit 5`
+![Java](https://img.shields.io/badge/Java-17-007396?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4-6DB33F?logo=springboot&logoColor=white)
+![Spring Security](https://img.shields.io/badge/Security-JWT-6DB33F?logo=springsecurity&logoColor=white)
+![JPA](https://img.shields.io/badge/Spring%20Data%20JPA-Hibernate-59666C?logo=hibernate&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-16%20passing-25A162?logo=junit5&logoColor=white)
 
----
-
-## 🎥 Demo
-
-<!--
-  Add your demo video here (see the README guide). Easiest options:
-  - YouTube (Unlisted): paste a clickable thumbnail or link, e.g.
-        [▶ Watch the 4-minute demo](https://youtu.be/YOUR_VIDEO_ID)
-  - Short clip (<= 10 MB): edit this README on github.com and drag the .mp4/.mov into the editor.
--->
-▶ **Demo video:** _(add your link here)_
+![EasyShop storefront](images/Main_Before_Login.png)
 
 ---
 
@@ -41,26 +36,43 @@ There are two kinds of people who use it:
 - View and update your profile
 - Check out — turn your cart into an order
 
+Add items to the cart (here: 2 phones + 1 laptop), then check out:
+
+![Cart with items and checkout](images/Cart_After_Adding_Items.png)
+
+View and update your profile:
+
+![Updating the user profile](images/Saving_User_Profile.png)
+
 **As an admin**
 - Create, edit, and delete products and categories
-- (Regular shoppers are blocked from these — only admins can manage the catalog)
+- Regular shoppers are blocked from these — only admins can manage the catalog
 
-> 📸 _Add screenshots here so reviewers can see it instantly:_
-> `![Storefront](images/storefront.png)` and `![Cart](images/cart.png)`
-> _(Create an `images/` folder, drop your screenshots in, and update the names.)_
+![Logged in as an admin](images/Main_Admin_login.png)
 
 ## 🏗️ How it's built (in three layers)
 
-The app is organized into three simple layers — each with one job:
+The app is organized into three simple layers — each with one job. A request flows down and
+the answer flows back, which keeps each part small and easy to test:
 
-```
-   Controller   →   handles web requests (URLs, status codes, who's allowed in)
-   Service      →   the "brain": business logic
-   Repository   →   talks to the MySQL database
+```mermaid
+flowchart TD
+    A["🌐 Controller<br/>@RestController — URLs, status codes, security"] --> B["🧠 Service<br/>@Service — business logic"]
+    B --> C["🗄️ Repository<br/>JpaRepository — data access"]
+    C --> D[("MySQL Database")]
+    style A fill:#c7d7f5,stroke:#3b5bdb,color:#111
+    style B fill:#c3f0d8,stroke:#2f9e44,color:#111
+    style C fill:#cfe8ff,stroke:#1971c2,color:#111
+    style D fill:#ffe8cc,stroke:#e8590c,color:#111
 ```
 
-So a request flows **Controller → Service → Repository → Database**, and the answer flows back.
-This keeps each part small and easy to test.
+## 🗄️ Database
+
+Seven related tables back the store. `users` owns `profiles`, `orders`, and `shopping_cart`;
+`products` belong to a `category`; and an order is one `orders` row plus one `order_line_items`
+row per product. (Diagram reverse-engineered from the actual `easyshop` schema.)
+
+![EasyShop database ER diagram](images/Database_ERD.png)
 
 ## ✨ What I built and fixed
 
@@ -79,6 +91,47 @@ This keeps each part small and easy to test.
 **🛡️ Added input validation + clean errors (bonus):**
 - Bad input (blank name, negative price…) is rejected with a clear `400` message saying exactly
   what's wrong — instead of saving junk or crashing.
+
+## 💡 An interesting piece of code — `OrderService.checkout`
+
+Turning a cart into an order means **several database writes**: insert the order, insert one
+line item per product, then empty the cart. If one failed halfway, you'd get a broken order.
+Two things make this method interesting:
+
+**1. It's all-or-nothing (`@Transactional`).** The whole method runs in one transaction —
+if anything throws, every write rolls back, so there are never half-finished orders.
+
+**2. Save the order first to get its database-generated id.** The line items need the
+`order_id`, but that id doesn't exist until the order row is inserted. So I save the order
+first, read back the id the database assigned, and attach it to each line item.
+
+```java
+@Transactional
+public Order checkout(int userId)
+{
+    ShoppingCart cart = shoppingCartService.getByUserId(userId);
+
+    if (cart.getItems().isEmpty())
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot checkout an empty cart.");
+
+    // save the order header first -> the DB assigns its id
+    Order savedOrder = orderRepository.save(order);   // before: id = 0, after: id = DB value
+
+    // one line item per product, linked by that new id
+    for (ShoppingCartItem item : cart.getItems().values())
+    {
+        OrderLineItem lineItem = new OrderLineItem();
+        lineItem.setOrderId(savedOrder.getOrderId());
+        lineItem.setProductId(item.getProductId());
+        lineItem.setSalesPrice(item.getProduct().getPrice());
+        lineItem.setQuantity(item.getQuantity());
+        orderLineItemRepository.save(lineItem);
+    }
+
+    shoppingCartService.clear(userId);   // empty the cart
+    return savedOrder;
+}
+```
 
 ---
 
@@ -100,12 +153,15 @@ This keeps each part small and easy to test.
    ```
    It runs at `http://localhost:8080`.
 
-**Sample logins** (password is `password` for all): `user` (shopper), `admin` (admin).
+> [!TIP]
+> **Sample logins** (password is `password` for all): `user` (shopper) and `admin` (admin).
 
 ## 🔐 Authentication
 - `POST /register` → `{ "username", "password", "confirmPassword" }`
 - `POST /login` → `{ "username", "password" }` → returns a **JWT token**
 - Send the token on protected requests: `Authorization: Bearer <token>`
+
+![Login screen](images/User_Login_Page.png)
 
 ## 📡 API reference
 
@@ -156,6 +212,22 @@ Both are locked in by unit tests in `ProductServiceTest`.
 - **16 tests** using `@DataJpaTest` + an in-memory **H2** database seeded by `src/test/resources/test-insert-data.sql` — fast and isolated from real MySQL.
 - Covers: both bug fixes; full `CategoryService` CRUD; `ShoppingCartService` (add / increment / update); `ProfileService` (get / update); `OrderService` checkout (incl. empty-cart rejection).
 - The web / security / validation layer is exercised through the bundled Insomnia collection.
+
+## 🔮 Future versions
+
+Features I'd build next, ranked by value vs. effort:
+
+1. **Order history ("My Orders")** — view past orders. Builds directly on checkout:
+   add `findByUserId` to `OrderRepository`, a `GET /orders` endpoint, and an orders page on the site.
+2. **Stock enforcement** — decrement `stock` when an order is placed and block adding
+   out-of-stock items (stock checks inside `OrderService.checkout` and `ShoppingCartService`).
+3. **Product reviews & ratings** — a `reviews` table, a `ReviewController`/`ReviewService`,
+   and an average-rating field on the product response.
+4. **Payment processing** — a payment step at checkout (e.g., Stripe) and an order
+   `status` column (PENDING → PAID → SHIPPED).
+5. **Search paging & sorting** — return products in pages, sortable by price/name,
+   using Spring Data `Pageable`.
+6. **Wishlist / favorites** — a `wishlist` table and endpoints to save items for later.
 
 ## 📂 Project structure
 ```
