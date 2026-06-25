@@ -62,7 +62,7 @@ public class ShoppingCartController
         ShoppingCart cart = shoppingCartService.updateQuantity(currentUserId(principal), productId, item.getQuantity());
         if (cart == null)
         {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not in cart");
         }
         return cart;
     }

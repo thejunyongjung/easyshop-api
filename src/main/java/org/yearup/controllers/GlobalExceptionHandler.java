@@ -6,6 +6,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -37,6 +38,18 @@ public class GlobalExceptionHandler
 
         // returns status with a JSON body instead of the default error page
         return ResponseEntity.status(e.getStatusCode()).body(body);
+    }
+
+    // When @PreAuthorize blocks someone without the right role (Access Denied)
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(AuthorizationDeniedException e)
+    {
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", 403);
+        body.put("error", "Forbidden");
+        body.put("message", "You do not have permission to perform this action");
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
     
 }

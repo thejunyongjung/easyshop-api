@@ -41,7 +41,7 @@ public class CategoriesController
         Category category = categoryService.getById(id);
 
         if (category == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found");
         }
         return category;
     }
@@ -68,7 +68,7 @@ public class CategoriesController
     public Category updateCategory(@PathVariable int id, @RequestBody Category category)
     {
         if (categoryService.getById(id) == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found");
         }
         return categoryService.update(id, category);
     }
@@ -78,7 +78,7 @@ public class CategoriesController
     public ResponseEntity<Void> deleteCategory(@PathVariable int id)
     {
         if (categoryService.getById(id) == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found");
         }
         categoryService.delete(id);
         return ResponseEntity.noContent().build() ;
