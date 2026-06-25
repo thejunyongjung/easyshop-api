@@ -74,23 +74,31 @@ row per product. (Diagram reverse-engineered from the actual `easyshop` schema.)
 
 ![EasyShop database ER diagram](images/Database_ERD.png)
 
-## ✨ What I built and fixed
+## ✨ What's implemented
 
-**🐛 Fixed two hidden bugs (with tests):**
-1. **Search was hiding most products.** A stray filter only let "featured" items through, so the
-   storefront showed a fraction of the catalog. Removed it — now search returns everything that matches.
-2. **Product edits weren't fully saving.** Editing a product returned "OK" but the **stock** never
-   changed. Fixed so every field saves.
+This is a final-exam capstone: fix the existing bugs, then build the new features. Everything below
+is done — **all required work, every optional phase, and the bonus.**
 
-**🚀 Built new features:**
-- **Categories** — full create / read / update / delete (admin-only writes)
-- **Shopping cart** — add (or increase quantity), update, and clear
-- **User profile** — view and update your own info
-- **Checkout** — convert a cart into a saved order
+### ✅ Required
+- **Phase 1 — Categories (CRUD).** Full `GET / POST / PUT / DELETE` on `/categories` via
+  `CategoriesController` + `CategoryService`. Writes are **admin-only**; reads are public.
+- **Phase 2 — Bug fixes (with unit tests).**
+  - **Bug 1 — search hid products.** A leftover `.filter(Product::isFeatured)` dropped every
+    non-featured product; removed it so search returns the full catalog.
+  - **Bug 2 — edits dropped `stock`.** `update` copied every field except `stock`; added
+    `existing.setStock(...)` so a product fully updates.
 
-**🛡️ Added input validation + clean errors (bonus):**
-- Bad input (blank name, negative price…) is rejected with a clear `400` message saying exactly
-  what's wrong — instead of saving junk or crashing.
+### 🎁 Optional (all completed)
+- **Phase 3 — Shopping cart.** `GET /cart`, `POST /cart/products/{id}` (insert, or +1 if the product
+  is already in the cart), `PUT /cart/products/{id}` (set quantity — *bonus*), `DELETE /cart` (clear).
+- **Phase 4 — User profile.** `GET /profile` and `PUT /profile` for the logged-in user.
+- **Phase 5 — Checkout.** `POST /orders` turns the cart into a saved order (an order header plus one
+  line item per product) and empties the cart. New `Order` / `OrderLineItem` models, repositories,
+  service, and controller.
+
+### 🏆 Bonus (beyond the spec)
+- **Input validation** + a **global error handler** for clean, consistent responses — see the
+  **Validation & error handling** section below.
 
 ## 💡 An interesting piece of code — `OrderService.checkout`
 
@@ -202,16 +210,45 @@ public Order checkout(int userId)
 Both are locked in by unit tests in `ProductServiceTest`.
 
 ## 🛡️ Validation & error handling (bonus)
-- Bean Validation on `Product` / `Category` (`@NotBlank`, `@Positive`, `@PositiveOrZero`) with `@Valid` on POST/PUT bodies.
-- A global `@RestControllerAdvice` (`GlobalExceptionHandler`) turns validation failures into a `400` with a `{ field: message }` body, and `ResponseStatusException`s into a consistent `{ status, message }` — no stack traces exposed.
+
+**Input validation** — Bean Validation on the `Product` and `Category` models (`@NotBlank`,
+`@Positive`, `@PositiveOrZero`) with `@Valid` on the POST/PUT bodies, so bad input is rejected
+*before* it ever reaches the database (no more saving junk or crashing).
+
+**Global error handler** — a single `@RestControllerAdvice` (`GlobalExceptionHandler`) turns
+exceptions into clean, consistent JSON instead of raw error pages:
+
+| Situation | Response |
+|---|---|
+| Invalid body — `@Valid` fails | `400` with `{ field: message }` for each bad field (e.g. `{ "name": "must not be blank" }`) |
+| Not found / bad request — `ResponseStatusException` | `{ status, message }` (e.g. `404` `"Category not found"`, or `400` `"Cannot checkout an empty cart."`) |
+| Non-admin hits an admin-only endpoint — `AuthorizationDeniedException` | `403` `{ status, error, message }` |
+
+Stack traces are switched off (`spring.web.error.include-stacktrace=never`), so no response ever
+leaks internal class names or framework details — cleaner for users and safer.
 
 ## 🧪 Testing
 ```bash
 ./mvnw test
 ```
-- **16 tests** using `@DataJpaTest` + an in-memory **H2** database seeded by `src/test/resources/test-insert-data.sql` — fast and isolated from real MySQL.
-- Covers: both bug fixes; full `CategoryService` CRUD; `ShoppingCartService` (add / increment / update); `ProfileService` (get / update); `OrderService` checkout (incl. empty-cart rejection).
-- The web / security / validation layer is exercised through the bundled Insomnia collection.
+**16 unit tests, all green.** They use `@DataJpaTest` with an in-memory **H2** database seeded by
+`src/test/resources/test-insert-data.sql`, so they run fast and never touch the real MySQL data.
+
+What each test class verifies — and why:
+
+| Test class | # | What it proves |
+|---|---|---|
+| `ProductServiceTest` | 2 | **Regression guards for both bugs** — search returns *all* products (Bug 1), and `update` persists `stock` (Bug 2). |
+| `CategoryServiceTest` | 5 | Full CRUD — get all, get-missing returns `null`, create adds, update persists changes, delete removes. |
+| `ShoppingCartServiceTest` | 3 | New product starts at quantity 1; adding the same product increments it; update sets the exact quantity. |
+| `ProfileServiceTest` | 3 | Get a profile, get-missing returns `null`, and update persists the changed fields. |
+| `OrderServiceTest` | 2 | Checkout creates the order **and** empties the cart; checking out an empty cart throws `400`. |
+| `ProductRepositoryTest` | 1 | `findById` returns the correct product (repository wiring works). |
+
+The two `ProductServiceTest` cases matter most: they **lock in the bug fixes** so neither bug can
+silently return. Test names follow `subject_shouldVerb_object`, and each has clear arrange / act /
+assert steps. The web, security, and validation layers are exercised end-to-end through the bundled
+**Insomnia** collection.
 
 ## 🔮 Future versions
 
