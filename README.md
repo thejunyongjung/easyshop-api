@@ -222,7 +222,8 @@ exceptions into clean, consistent JSON instead of raw error pages:
 |---|---|
 | Invalid body — `@Valid` fails | `400` with `{ field: message }` for each bad field (e.g. `{ "name": "must not be blank" }`) |
 | Not found / bad request — `ResponseStatusException` | `{ status, message }` (e.g. `404` `"Category not found"`, or `400` `"Cannot checkout an empty cart."`) |
-| Non-admin hits an admin-only endpoint — `AuthorizationDeniedException` | `403` `{ status, error, message }` |
+| Not logged in (no / invalid token) | `401` `{ status, error, message }` — "You must be logged in to do that." |
+| Logged in but lacking the role — `AuthorizationDeniedException` | `403` `{ status, error, message }` — "You do not have permission…" |
 
 Stack traces are switched off (`spring.web.error.include-stacktrace=never`), so no response ever
 leaks internal class names or framework details — cleaner for users and safer.
