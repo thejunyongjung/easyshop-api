@@ -227,6 +227,12 @@ exceptions into clean, consistent JSON instead of raw error pages:
 Stack traces are switched off (`spring.web.error.include-stacktrace=never`), so no response ever
 leaks internal class names or framework details — cleaner for users and safer.
 
+**See the difference** — the same blocked request (`403`), without the handler vs. with it:
+
+| ❌ Without the handler | ✅ With the handler |
+|---|---|
+| ![Raw stack trace exposed to the user](images/error_before.png) | ![Clean, friendly message](images/error_after.png) |
+
 ## 🧪 Testing
 ```bash
 ./mvnw test
