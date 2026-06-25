@@ -31,7 +31,7 @@ public class ProfileController {
     {
         Profile profile = profileService.getByUserId(currentUserId(principal));
         if (profile == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found");
         }
         return profile;
     }
