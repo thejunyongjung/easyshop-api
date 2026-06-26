@@ -15,7 +15,7 @@
 
 ---
 
-## 📖 What is EasyShop? (the plain-English version)
+## 📖 What is EasyShop?
 
 EasyShop is the **behind-the-scenes program** that powers an online store's website.
 When a customer clicks "Add to Cart" on the site, the website quietly asks *this* program
